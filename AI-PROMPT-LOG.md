@@ -1,10 +1,10 @@
 # AI Prompt and Use Record
 
-This record summarizes the AI-assisted engineering work for the Java 17/Maven course-registration slice. It is not a verbatim transcript. No credentials, secrets, or sensitive data were included.
+The prompts listed below were given by the human user to the AI assistant. The response column summarizes what the AI returned, and the disposition column records the human review and resulting changes. This is a concise prompt/use record rather than a verbatim transcript. No credentials, secrets, or sensitive data were included.
 
 ## Prompts and outcomes
 
-| Prompt / activity | AI response summary | Disposition and files informed | Verification |
+| Human prompt given to AI | AI response summary | Human disposition and files/decisions informed | Verification |
 | --- | --- | --- | --- |
 | Initial request supplied the desired project tree for a course-registration assessment. | Scaffolded a Java/Maven domain model and documentation; initial implementation had simple enrollment/drop semantics. | Accepted as a starting point, then materially revised after the actual implementation and assessment requirements were clarified. Informed the source files and initial docs. | Initial `mvn test` completed successfully; later review identified stale assumptions and insufficient tests. |
 | “could you check again all code and files” | Reviewed the then-current implementation and reported that it used eligibility plus a waitlist and FIFO promotion, while tests/docs were stale or incomplete. | Findings accepted. They prompted replacing stale documentation and expanding tests. | Re-ran `mvn test`; it passed the then-existing four tests. |
