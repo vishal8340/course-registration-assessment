@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Architecture, technology stack, design policies, limitations, and development-time AI use for the course registration assessment.">
+  <title>Course Registration — Architecture</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --page: #ffffff;
+      --panel: #ffffff;
+      --panel-raised: #f6f9ff;
+      --line: #d6e0ef;
+      --text: #152b4a;
+      --muted: #536985;
+      --blue: #1459a6;
+      --mint: #16836f;
+      --violet: #6543a5;
+      --amber: #a86408;
+      --rose: #b52d48;
+      --shadow: 0 10px 28px rgb(30 64 110 / 8%);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--page);
+      color: var(--text);
+      font: 15px/1.6 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    a { color: var(--blue); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    code { color: #164d8a; overflow-wrap: anywhere; }
+    .wrap { width: min(1160px, calc(100% - 40px)); margin: 0 auto; }
+    header { padding: 58px 0 28px; }
+    .eyebrow { color: var(--blue); font-size: .76rem; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; }
+    h1 { margin: 10px 0 10px; max-width: 820px; font-size: clamp(2.2rem, 5vw, 4rem); line-height: 1.05; letter-spacing: -.045em; }
+    .lead { max-width: 770px; color: var(--muted); font-size: 1.08rem; }
+    .meta { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 22px; }
+    .pill { border: 1px solid var(--line); border-radius: 999px; padding: 5px 11px; color: #294666; background: #fff; font-size: .83rem; }
+
+    nav { display: flex; flex-wrap: wrap; gap: 8px; padding: 16px 0 26px; border-top: 1px solid var(--line); }
+    nav a { border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; color: var(--muted); font-size: .86rem; }
+    nav a:hover { border-color: var(--blue); color: var(--blue); background: #edf5ff; text-decoration: none; }
+    section { margin: 18px 0 30px; scroll-margin-top: 20px; }
+    .section-head { display: flex; align-items: end; justify-content: space-between; gap: 18px; margin-bottom: 14px; }
+    h2 { margin: 0; font-size: 1.45rem; letter-spacing: -.02em; }
+    .section-note { max-width: 600px; margin: 0; color: var(--muted); font-size: .92rem; }
+    .panel { border: 1px solid var(--line); border-radius: 16px; background: var(--panel); box-shadow: var(--shadow); }
+
+    .diagram { padding: 24px; overflow: hidden; }
+    .diagram-label { margin: 0 0 17px; color: var(--muted); font-size: .78rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+    .flow { display: grid; grid-template-columns: minmax(150px, .8fr) 45px minmax(300px, 1.7fr) 45px minmax(190px, 1fr); align-items: stretch; gap: 8px; }
+    .node { min-width: 0; border: 1px solid var(--line); border-radius: 13px; padding: 16px; background: var(--panel-raised); }
+    .node h3 { margin: 2px 0 7px; font-size: 1rem; }
+    .node p { margin: 0; color: var(--muted); font-size: .86rem; }
+    .node-kicker { color: var(--blue); font-size: .7rem; font-weight: 800; letter-spacing: .11em; text-transform: uppercase; }
+    .node.input { border-color: #9bbce3; background: #f0f6ff; }
+    .node.service { border-color: #6da0d5; background: linear-gradient(145deg, #edf5ff, #f9fbff); }
+    .node.model { border-color: #b3a2d8; background: #f8f5ff; }
+    .arrow { align-self: center; color: var(--blue); text-align: center; font-size: 1.8rem; }
+    .arrow small { display: block; color: var(--muted); font-size: .65rem; line-height: 1.2; }
+    .service-stack { display: grid; gap: 12px; }
+    .state-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+    .state { border: 1px solid #c9d8eb; border-radius: 10px; padding: 11px; background: #fff; }
+    .state strong { display: block; color: var(--blue); font-size: .87rem; }
+    .state span { color: var(--muted); font-size: .78rem; }
+    .flow-bottom { display: grid; grid-template-columns: 1fr minmax(210px, .55fr) 1fr; align-items: center; gap: 12px; margin-top: 15px; }
+    .flow-bottom .node { min-height: 88px; }
+    .downlink { color: var(--blue); text-align: center; font-size: .8rem; }
+    .downlink b { display: block; font-size: 1.3rem; }
+    .diagram-caption { margin: 17px 0 0; color: var(--muted); font-size: .81rem; }
+    .lifecycle { margin-top: 23px; }
+    .lifecycle-title { margin: 0 0 10px; color: #294666; font-size: .83rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+    .lifecycle-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .lifecycle-step { position: relative; min-height: 112px; border: 1px solid var(--line); border-radius: 11px; padding: 13px; background: #fff; }
+    .lifecycle-step:not(:last-child)::after { content: "›"; position: absolute; z-index: 1; top: 34px; right: -11px; display: grid; width: 20px; height: 24px; place-items: center; color: var(--blue); background: var(--panel); font-size: 1.5rem; font-weight: 800; }
+    .lifecycle-step b { display: block; margin-bottom: 4px; color: var(--blue); font-size: .83rem; }
+    .lifecycle-step span { display: block; color: var(--muted); font-size: .8rem; }
+
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 13px; }
+    .card { padding: 18px; }
+    .card h3 { margin: 0 0 8px; font-size: 1rem; }
+    .card p { margin: 0; color: var(--muted); font-size: .88rem; }
+    .icon { display: inline-grid; width: 29px; height: 29px; place-items: center; margin-bottom: 10px; border-radius: 9px; background: #eaf2ff; color: var(--blue); font-weight: 800; }
+    .tag-row { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 12px; }
+    .tag { border-radius: 6px; padding: 3px 7px; background: #edf3fb; color: #345575; font-size: .74rem; }
+    .policy-list, .limit-list { display: grid; gap: 10px; padding: 0; margin: 0; list-style: none; }
+    .policy-list li, .limit-list li { display: flex; gap: 10px; color: var(--muted); font-size: .9rem; }
+    .check { color: var(--mint); font-weight: 900; }
+    .warn { color: var(--amber); font-weight: 900; }
+
+    .ai-layout { display: grid; grid-template-columns: 1.15fr .85fr; gap: 13px; }
+    .ai-card { padding: 20px; }
+    .ai-card h3 { margin: 0 0 8px; }
+    .ai-card p { margin: 0 0 12px; color: var(--muted); font-size: .9rem; }
+    .steps { display: grid; gap: 10px; }
+    .step { display: grid; grid-template-columns: 31px 1fr; gap: 10px; align-items: start; }
+    .step-num { display: grid; width: 28px; height: 28px; place-items: center; border: 1px solid #cbbce7; border-radius: 50%; color: var(--violet); background: #f8f5ff; font-size: .8rem; font-weight: 800; }
+    .step strong { display: block; font-size: .88rem; }
+    .step span { display: block; color: var(--muted); font-size: .82rem; }
+    .callout { border-left: 3px solid var(--violet); padding: 12px 14px; border-radius: 0 9px 9px 0; background: #f5f1fc; color: #47356f; font-size: .86rem; }
+    .verify { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 14px; }
+    .result { border: 1px solid #9acbbb; border-radius: 8px; padding: 6px 10px; color: #146b59; background: #eff9f5; font-size: .84rem; font-weight: 800; }
+    footer { margin-top: 40px; padding: 22px 0 36px; border-top: 1px solid var(--line); color: var(--muted); font-size: .83rem; }
+
+    @media (max-width: 850px) {
+      .flow { grid-template-columns: 1fr; }
+      .arrow { transform: rotate(90deg); height: 26px; }
+      .arrow small { display: none; }
+      .flow-bottom { grid-template-columns: 1fr; }
+      .downlink b { transform: rotate(90deg); }
+      .lifecycle-grid { grid-template-columns: 1fr 1fr; }
+      .lifecycle-step:nth-child(2)::after { display: none; }
+      .lifecycle-step:nth-child(3)::after { content: "↓"; top: auto; right: 50%; bottom: -18px; }
+      .grid-3, .ai-layout { grid-template-columns: 1fr; }
+      .section-head { display: block; }
+      .section-note { margin-top: 5px; }
+    }
+    @media (max-width: 520px) {
+      .wrap { width: min(100% - 24px, 1160px); }
+      header { padding-top: 38px; }
+      .diagram { padding: 15px; }
+      .state-grid, .lifecycle-grid { grid-template-columns: 1fr; }
+      .lifecycle-step::after { display: none !important; }
+    }
+    @media print {
+      :root { color-scheme: light; --page: #fff; --panel: #fff; --panel-raised: #f5f7fb; --line: #cdd5e1; --text: #101828; --muted: #475467; }
+      body { background: white; color: var(--text); }
+      .panel { box-shadow: none; break-inside: avoid; }
+      nav { display: none; }
+      a { color: #1649a3; }
+    }
+  </style>
+</head>
+<body>
+  <header class="wrap">
+    <div class="eyebrow">Project architecture · bounded registration slice</div>
+    <h1>Course Registration</h1>
+    <p class="lead">A single-offering Java domain model for capacity-aware enrollment, prerequisite checks, FIFO waitlisting, and promotion when a learner drops.</p>
+    <div class="meta" aria-label="Technology summary">
+      <span class="pill">Java 17</span>
+      <span class="pill">Maven</span>
+      <span class="pill">JUnit 5</span>
+      <span class="pill">In-memory domain model</span>
+      <span class="pill">No runtime AI</span>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <nav aria-label="Page sections">
+      <a href="#architecture">Architecture</a>
+      <a href="#stack">Technology stack</a>
+      <a href="#design">Design and invariants</a>
+      <a href="#limitations">Limitations</a>
+      <a href="#ai">AI use</a>
+      <a href="#verification">Verification</a>
+    </nav>
+
+    <section id="architecture">
+      <div class="section-head">
+        <h2>Architecture at a glance</h2>
+        <p class="section-note">Follow a request from caller to service, the state it reads or changes, and the result it returns.</p>
+      </div>
+      <div class="panel diagram" role="img" aria-label="Architecture diagram: caller or tests invoke CourseOffering, which checks the learner map and maintains enrolled and waitlist state, returning enrollment or drop result records and read-only snapshots. Maven and JUnit test the behavior.">
+        <p class="diagram-label">Request and state flow</p>
+        <div class="flow">
+          <article class="node input">
+            <span class="node-kicker">Entry points</span>
+            <h3>Caller / JUnit tests</h3>
+            <p>Requests enrollment or drop using a learner ID. No web or CLI layer is included.</p>
+          </article>
+          <div class="arrow" aria-hidden="true">→<small>enroll(id)<br>drop(id)</small></div>
+          <div class="service-stack">
+            <article class="node service">
+              <span class="node-kicker">Service layer · guarded by ReentrantLock</span>
+              <h3>CourseOffering</h3>
+              <p>Validates learner identity and eligibility, enforces capacity, applies queue policy, and coordinates transitions atomically per instance.</p>
+              <div class="state-grid">
+                <div class="state"><strong>Enrolled IDs</strong><span>LinkedHashSet · insertion order</span></div>
+                <div class="state"><strong>Waitlist IDs</strong><span>LinkedList · FIFO queue</span></div>
+              </div>
+            </article>
+            <div class="downlink"><b aria-hidden="true">↕</b>lookup learner · read eligibility</div>
+            <article class="node model">
+              <span class="node-kicker">Domain data</span>
+              <h3>Learner lookup</h3>
+              <p>Map snapshot keyed by ID. Each Learner carries a mutable, volatile prerequisite flag.</p>
+            </article>
+          </div>
+          <div class="arrow" aria-hidden="true">→<small>typed outcome<br>or snapshot</small></div>
+          <article class="node input">
+            <span class="node-kicker">Outputs</span>
+            <h3>Results and views</h3>
+            <p><code>EnrollmentResult</code>, <code>DropResult</code>, immutable enrolled/waitlist snapshots, capacity count.</p>
+          </article>
+        </div>
+        <div class="flow-bottom">
+          <article class="node">
+            <span class="node-kicker">Build / test tooling</span>
+            <h3>Maven · Java 17 release</h3>
+            <p>Compiler plugin targets Java 17; Surefire runs JUnit Jupiter tests.</p>
+          </article>
+          <div class="downlink"><b aria-hidden="true">↑</b>build / test feedback</div>
+          <article class="node">
+            <span class="node-kicker">Automated checks</span>
+            <h3>CourseOfferingTest</h3>
+            <p>Capacity, duplicates, prerequisite rejection, promotions, invalid drops, defensive map snapshot, and concurrent enrollment.</p>
+          </article>
+        </div>
+        <div class="lifecycle">
+          <p class="lifecycle-title">State transition flow inside CourseOffering</p>
+          <div class="lifecycle-grid">
+            <div class="lifecycle-step"><b>1 · Lock and validate</b><span>Acquire the per-offering lock; look up learner ID; return a clear invalid or duplicate status when applicable.</span></div>
+            <div class="lifecycle-step"><b>2 · Check prerequisite</b><span>Reject an ineligible new request. Existing enrolled/waitlisted duplicates are reported before rechecking eligibility.</span></div>
+            <div class="lifecycle-step"><b>3 · Enroll or queue</b><span>With a seat, add to enrolled. If full, append the eligible learner once to the FIFO waitlist.</span></div>
+            <div class="lifecycle-step"><b>4 · Drop and promote</b><span>Remove the enrolled ID, scan the queue, retain ineligible entries, promote the earliest eligible one, then unlock.</span></div>
+          </div>
+        </div>
+        <p class="diagram-caption">State is local to one <code>CourseOffering</code> object and exists only in memory. A dropped seat is filled immediately by the first eligible learner found in the FIFO scan.</p>
+      </div>
+    </section>
+
+    <section id="stack">
+      <div class="section-head">
+        <h2>Technology stack</h2>
+        <p class="section-note">Dependencies and language versions are taken from the project build configuration.</p>
+      </div>
+      <div class="grid-3">
+        <article class="panel card">
+          <span class="icon">J</span>
+          <h3>Java 17</h3>
+          <p>Domain logic, records for operation results, collections, and a lock for per-offering state transitions.</p>
+          <div class="tag-row"><span class="tag">JDK release 17</span><span class="tag">ReentrantLock</span><span class="tag">Collections</span></div>
+        </article>
+        <article class="panel card">
+          <span class="icon">M</span>
+          <h3>Maven</h3>
+          <p>Project/build lifecycle and dependency management. Compiler targets Java 17; Surefire runs JUnit tests.</p>
+          <div class="tag-row"><span class="tag">maven-compiler-plugin 3.16.0</span><span class="tag">Surefire 3.2.5</span></div>
+        </article>
+        <article class="panel card">
+          <span class="icon">T</span>
+          <h3>JUnit Jupiter 5.10.2</h3>
+          <p>Focused automated tests, including a latch-coordinated concurrent enrollment test.</p>
+          <div class="tag-row"><span class="tag">junit-jupiter-api</span><span class="tag">junit-jupiter-engine</span></div>
+        </article>
+      </div>
+    </section>
+
+    <section id="design">
+      <div class="section-head">
+        <h2>Design rules and invariants</h2>
+        <p class="section-note">A single, explicit eligibility policy avoids introducing a configurable policy engine.</p>
+      </div>
+      <div class="panel card">
+        <ul class="policy-list">
+          <li><span class="check">✓</span><span><strong>Enrollment:</strong> unknown IDs are invalid; duplicate enrolled/waitlisted IDs are reported without duplication; prerequisite failure is rejected. Eligible learners take available seats, otherwise they join the queue.</span></li>
+          <li><span class="check">✓</span><span><strong>Promotion:</strong> after a successful drop, scan the queue from the head and promote the first learner eligible at scan time.</span></li>
+          <li><span class="check">✓</span><span><strong>Ineligible queue entries:</strong> skip without removing; preserve relative position for a later seat opening. They are not promoted until eligible.</span></li>
+          <li><span class="check">✓</span><span><strong>Capacity:</strong> enrolled count remains between zero and capacity; a promoted learner fills exactly one newly freed seat.</span></li>
+          <li><span class="check">✓</span><span><strong>Safety:</strong> lock serializes operations on one offering; constructor snapshots learner-map structure and verifies map keys match learner IDs; read APIs return immutable copies.</span></li>
+          <li><span class="check">✓</span><span><strong>Clear outcomes:</strong> status enums and result records distinguish enrollment, waitlisting, invalid IDs, repeated requests, successful drops, and promotion results.</span></li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="limitations">
+      <div class="section-head">
+        <h2>Limitations and follow-up risks</h2>
+        <p class="section-note">Scope is intentionally limited to one offering's enrollment/drop/promotion slice.</p>
+      </div>
+      <div class="panel card">
+        <ul class="limit-list">
+          <li><span class="warn">!</span><span>State is in-memory and not shared across instances or processes; there is no persistence or recovery.</span></li>
+          <li><span class="warn">!</span><span>Prerequisite is a boolean flag, not a course-level prerequisite model. Learner IDs and names are non-null but are not normalized or required to be non-blank.</span></li>
+          <li><span class="warn">!</span><span>Map structure is copied, but Learner objects remain mutable. Eligibility changes do not trigger promotion until a successful drop opens a seat.</span></li>
+          <li><span class="warn">!</span><span>No frontend, CLI, catalog, payments, identity integration, multi-term registration, deployment, or database is provided.</span></li>
+          <li><span class="warn">!</span><span>Locking protects only this object in this process; it is not a distributed coordination mechanism.</span></li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="ai">
+      <div class="section-head">
+        <h2>AI capabilities used</h2>
+        <p class="section-note">AI assistance was used during engineering and documentation; it is not part of the running application.</p>
+      </div>
+      <div class="ai-layout">
+        <article class="panel ai-card">
+          <h3>Development-time assistance</h3>
+          <div class="steps">
+            <div class="step"><span class="step-num">01</span><div><strong>Project scaffolding</strong><span>Generated the initial Maven layout and a baseline Java model from the requested project structure.</span></div></div>
+            <div class="step"><span class="step-num">02</span><div><strong>Code and criteria review</strong><span>Compared current behavior to the supplied acceptance criteria and surfaced missing promotion, invalid-drop, and concurrency coverage.</span></div></div>
+            <div class="step"><span class="step-num">03</span><div><strong>Test and documentation drafting</strong><span>Helped add focused tests and update the README, design, limitations, and AI-use record.</span></div></div>
+            <div class="step"><span class="step-num">04</span><div><strong>Independent verification</strong><span>Reviewed suggested behavior against the actual locking and waitlist implementation, then ran the Maven test suite.</span></div></div>
+          </div>
+        </article>
+        <article class="panel ai-card">
+          <h3>Human-reviewed policy choices</h3>
+          <p>AI suggestions were treated as a draft. The documented rule is: reject ineligible learners at enrollment; when promoting, skip ineligible queued learners but retain their position. The implementation and tests reflect this stated assumption.</p>
+          <div class="callout">No AI model, API, credentials, or external AI service is called at runtime. Prompt summaries, decisions, and verification evidence are recorded in <a href="AI-PROMPT-LOG.md">AI-PROMPT-LOG.md</a>.</div>
+          <div class="tag-row"><span class="tag">Scaffold</span><span class="tag">Review</span><span class="tag">Test drafting</span><span class="tag">Documentation</span></div>
+        </article>
+      </div>
+    </section>
+
+    <section id="verification">
+      <div class="section-head">
+        <h2>Verification and run</h2>
+        <p class="section-note">The project is a testable domain model, not a standalone end-user application.</p>
+      </div>
+      <div class="panel card">
+        <p style="margin:0;color:var(--muted)">From the project root, run <code>mvn clean test</code>. The recorded verification is <strong style="color:var(--mint)">9 tests passed · 0 failures · 0 errors</strong>. Test cases are in <code>src/test/java/registration/CourseOfferingTest.java</code>; setup guidance is in <a href="README.md">README.md</a>.</p>
+        <div class="verify"><span class="result">BUILD SUCCESS</span><span class="pill">Acceptance-focused test coverage</span><span class="pill">Java 17 compilation</span></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="wrap">
+    Architecture reflects the current source and project documentation. This page is a static, self-contained HTML artifact; no JavaScript or external assets are required.
+  </footer>
+</body>
+</html>
