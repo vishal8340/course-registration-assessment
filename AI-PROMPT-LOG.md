@@ -11,6 +11,14 @@ The prompts listed below were given by the human user to the AI assistant. The r
 | “based on code could you please also update other files like design.md, AI-prompt-logs and limitations and readme files” | Updated the four documentation files to describe the implementation visible at that time. | Accepted as a doc update; the later acceptance criteria review led to further corrections and more precise statements. | Read back the updated files and searched for outdated statements. |
 | User supplied acceptance criteria for capacity, waitlist uniqueness, FIFO promotion, ineligible learners, invalid/repeated drops, focused/concurrency tests, design/setup/limitations deliverables, and an AI-use record. | Compared criteria with the code. The key gaps were tests for promotion, invalid/repeated drops, and concurrency; the map was also retained by reference. | Accepted the criteria. Added tests, changed `CourseOffering` to snapshot and validate its learner map, updated the compiler target to use `release`, and expanded the design, README, limitations, and this record. | `mvn clean test` passed all 9 tests with 0 failures/errors. The initial clean build showed Java source/target module-path warnings; switched the Maven compiler configuration to `maven.compiler.release=17` and reran the clean test. |
 
+## Example: partial acceptance of an AI response
+
+- **Human prompt:** The initial request provided the required project file tree; it did not specify detailed enrollment or waitlist rules.
+- **AI response:** The AI scaffolded a basic capacity-based enrollment/drop model, assuming that a full course should reject another enrollment and omitting prerequisites and a waitlist.
+- **Human decision:** **Partially accepted.** The Maven/Java project structure and JUnit starting point were useful. The inferred behavior was **rejected/rewritten** once the actual implementation and acceptance criteria established eligibility checks, waitlisting when full, and FIFO promotion. The final policy was stated explicitly rather than treating the AI's initial assumption as a requirement.
+- **Files/decisions affected:** `pom.xml`, `CourseOffering.java`, `EnrollmentStatus.java`, `DropStatus.java`, `CourseOfferingTest.java`, and the policy sections in `DESIGN.md` and `README.md`.
+- **Verification:** Added focused tests for capacity, prerequisite rejection, duplicate requests, FIFO promotion, skip-and-retain handling of ineligible waitlisted learners, invalid/repeated drops, and concurrent enrollment. `mvn clean test` passed all 9 tests with 0 failures or errors.
+
 ## Assumptions and independently reviewed decisions
 
 - At enrollment time, an ineligible learner is rejected and never newly waitlisted.
